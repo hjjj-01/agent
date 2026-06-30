@@ -1,0 +1,40 @@
+# LangChain 核心库
+langchain==0.1.0
+langchain-openai==0.0.2
+langchain-community==0.0.10
+
+# OpenAI API（用于LLM）
+openai==1.7.2
+
+# 向量数据库（用于RAG）
+chromadb==0.4.22
+faiss-cpu==1.14.3
+
+# 飞书SDK
+lark-oapi==1.2.14
+
+# Web框架（用于飞书机器人接收消息）
+fastapi==0.109.0
+uvicorn==0.27.0
+pydantic==2.5.3
+
+# HTTP请求（用于WMS接口调用）
+requests==2.31.0
+httpx==0.26.0
+
+# 环境变量管理
+python-dotenv==1.0.0
+
+# 数据处理
+pandas==2.1.4
+numpy==1.26.2
+
+# 日志
+loguru==0.7.2
+
+# 测试
+pytest==7.4.4
+pytest-asyncio==0.23.3
+
+# 异步支持
+aiohttp==3.9.1
