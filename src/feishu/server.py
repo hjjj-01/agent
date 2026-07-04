@@ -12,14 +12,20 @@
 飞书事件推送流程：
 飞书用户发送消息 → 飞书服务器 → HTTP POST请求到我们的服务器 → 
 处理事件 → 返回HTTP响应 → 飞书服务器确认收到
+
+重要：飞书要求 webhook 在 3 秒内返回响应！如果 Agent 同步处理耗时
+超过 3 秒，飞书会认为超时并重试，导致同一条消息被处理多次。
+因此这里使用 BackgroundTasks 异步处理：收到事件后立刻返回 200，
+然后在后台线程中调用 Agent 并发送回复。
 """
 from typing import Dict, Any
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from loguru import logger
 import uvicorn
 import json
+import asyncio
 
 # 导入飞书机器人
 from .bot import FeishuBot, MessageHandler
@@ -83,16 +89,22 @@ class FeishuServer:
         logger.info("设置FastAPI路由")
 
         @self.app.post("/webhook")
-        async def handle_webhook(request: Request):
+        async def handle_webhook(request: Request, background_tasks: BackgroundTasks):
             """
             处理飞书Webhook请求
 
             飞书将事件推送到这个路由。
-            我们需要：
-            1. 解析请求体
-            2. 验证请求来源
-            3. 处理事件
-            4. 返回响应
+            
+            关键设计：3秒超时问题
+            ============================================================
+            飞书要求 webhook 在 3 秒内返回 HTTP 200，否则认为超时并重试。
+            但 Agent 调用 LLM 可能需要 5-10 秒，所以不能同步等待。
+            
+            解决方案：
+            1. 收到事件 → 立刻返回 200（飞书停止重试）
+            2. 把事件处理放进 BackgroundTasks（后台异步执行）
+            3. 后台线程慢慢调 Agent、发回复
+            ============================================================
             """
             logger.info("收到飞书Webhook请求")
 
@@ -102,41 +114,47 @@ class FeishuServer:
 
                 logger.info(f"请求体: {json.dumps(body, ensure_ascii=False)[:200]}...")
 
-                # 验证请求（可选，根据飞书配置）
-                # if not self.message_handler.verify_request(body):
-                #     raise HTTPException(status_code=403, detail="验证失败")
+                # ============================================================
+                # URL 验证（飞书配置事件订阅地址时触发）
+                # ============================================================
+                if body.get("type") == "url_verification":
+                    challenge = body.get("challenge", "")
+                    logger.info(f"URL 验证请求，返回 challenge: {challenge}")
+                    return JSONResponse(
+                        status_code=200,
+                        content={"challenge": challenge}
+                    )
 
-                # 解析事件
-                # 飞书事件结构：
-                # {
-                #   "schema": "2.0",
-                #   "header": {
-                #     "event_id": "xxx",
-                #     "event_type": "im.message.receive_v1",
-                #     "token": "xxx"
-                #   },
-                #   "event": { ... }
-                # }
+                # 解析事件类型
                 header = body.get("header", {})
                 event_type = header.get("event_type", "")
-                event_data = body
 
-                # 处理事件
-                result = self.message_handler.handle_event(event_type, event_data)
+                # ============================================================
+                # 异步处理：把耗时操作放进后台任务
+                # ============================================================
+                # 飞书可能重试，所以靠 event_id 去重可以避免重复处理
+                # 这里先用 background_tasks 解决超时问题，去重后面再优化
+                # ============================================================
+                if event_type == "im.message.receive_v1":
+                    # 放入后台任务，立刻返回 200
+                    # add_task 会在后台线程中执行，不阻塞 webhook 响应
+                    background_tasks.add_task(
+                        self._process_event_async,
+                        event_type,
+                        body
+                    )
+                else:
+                    # 非消息事件（如审批、回调等），同步处理即可
+                    self.message_handler.handle_event(event_type, body)
 
-                logger.info(f"事件处理结果: {result}")
-
-                # 返回成功响应
-                # 飞书期望收到200响应，表示我们成功处理了事件
+                # 立刻返回 200，飞书不会重试
                 return JSONResponse(
                     status_code=200,
-                    content={"code": 0, "msg": "success", "data": result}
+                    content={"code": 0, "msg": "success"}
                 )
 
             except Exception as e:
                 logger.error(f"处理Webhook请求失败: {str(e)}")
-                # 返回错误响应
-                # 飞书会根据响应状态判断是否需要重试
                 return JSONResponse(
                     status_code=500,
                     content={"code": 500, "msg": str(e)}
@@ -207,6 +225,24 @@ class FeishuServer:
                     status_code=500,
                     content={"error": str(e)}
                 )
+
+    def _process_event_async(self, event_type: str, event_data: Dict[str, Any]):
+        """
+        后台异步处理飞书事件
+
+        这个方法由 BackgroundTasks 在后台线程中调用，
+        不会阻塞 webhook 的 HTTP 响应，从而避免飞书 3 秒超时重试。
+
+        Args:
+            event_type: 事件类型（如 im.message.receive_v1）
+            event_data: 完整的事件数据
+        """
+        try:
+            logger.info(f"后台处理事件: {event_type}")
+            result = self.message_handler.handle_event(event_type, event_data)
+            logger.info(f"后台处理完成: {result}")
+        except Exception as e:
+            logger.error(f"后台处理事件失败: {str(e)}")
 
     def start(self):
         """

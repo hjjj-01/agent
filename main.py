@@ -20,7 +20,15 @@ WMS AI Agent - 主入口文件
     通过/test接口直接测试Agent功能，无需飞书配置。
 """
 import sys
+import io
 from pathlib import Path
+
+# 设置控制台编码为UTF-8（解决Windows GBK编码问题）
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+elif sys.platform == 'win32':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
 # 将src目录添加到Python路径
 sys.path.insert(0, str(Path(__file__).parent))

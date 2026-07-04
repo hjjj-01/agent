@@ -114,10 +114,16 @@ class FeishuBot:
 
         try:
             # 解析事件数据
+            # 飞书事件 v2.0 格式：
+            # { "schema": "2.0", "header": {...}, "event": {
+            #     "message": { "chat_id": "oc_xxx", "content": "...", ... },
+            #     "sender": { "sender_id": { "open_id": "ou_xxx" } }
+            # }}
             event = event_data.get("event", {})
             message = event.get("message", {})
             sender = event.get("sender", {})
-            chat_id = event.get("chat_id", "")
+            # chat_id 在 message 对象里，不是 event 的直接子字段！
+            chat_id = message.get("chat_id", "")
 
             # 获取发送者ID
             sender_id = sender.get("sender_id", {}).get("open_id", "")

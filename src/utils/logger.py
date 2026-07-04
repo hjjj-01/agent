@@ -4,6 +4,7 @@
 """
 import sys
 from pathlib import Path
+# loguru 的 logger 是一个全局共享的单例对象！
 from loguru import logger
 
 
@@ -26,7 +27,14 @@ def setup_logger(log_level: str = "INFO", log_file: str = None):
         - 控制台输出（彩色）
         - 文件输出（如果指定）
     """
-    # 移除默认的handler
+    # 设置控制台编码为UTF-8（解决Windows GBK编码问题）
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8')
+    elif sys.platform == 'win32':
+        import io
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+
+    # 清空默认格式
     logger.remove()
 
     # 添加控制台输出（带颜色）
