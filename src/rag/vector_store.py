@@ -33,12 +33,13 @@ SentenceTransformerEmbeddings = HuggingFaceEmbeddings
 
 class VectorStore:
    
+#    只做了两件事：1.初始化embedding模型，2.创建或获取一个集合（表）
     def __init__(
         self,
-        persist_directory: str,
-        openai_api_key: str,
+        persist_directory: str,  # 向量数据库文件的持久化存储目录，数据会保存到这个文件夹中
+        openai_api_key: str, 
         openai_api_base: str = "https://api.openai.com/v1",
-        collection_name: str = "wms_knowledge_base",
+        collection_name: str = "wms_knowledge_base",  # 向量数据库中集合（表）的名称
         embedding_model: str = "text-embedding-3-small",
         embedding_api_base: str = None,
         aliyun_api_key: str = None
@@ -48,7 +49,7 @@ class VectorStore:
         self.collection_name = collection_name
 
         logger.info(f"初始化向量数据库（LangChain 1.x），目录: {persist_directory}")
-
+        # 1
         # 确保目录存在
         Path(persist_directory).mkdir(parents=True, exist_ok=True)
 
@@ -74,17 +75,18 @@ class VectorStore:
                 openai_api_base=embedding_api_base or openai_api_base,
                 model=embedding_model
             )
-
+        # 2
         self.client = chromadb.Client(
             Settings(
-                persist_directory=persist_directory,
+                persist_directory=persist_directory,  # 持久化存储目录
                 anonymized_telemetry=False  # 不上报使用数据，保护隐私
             )
         )
 
         try:
+            # get_or_create_collection(...)：创建或获取一个集合（表）
             self.collection = self.client.get_or_create_collection(
-                name=collection_name,
+                name=collection_name,  # 向量数据库中集合（表）的名称
                 metadata={"description": "WMS 知识库"}
             )
             logger.info(f"向量数据库集合 '{collection_name}' 已就绪")
@@ -93,8 +95,8 @@ class VectorStore:
             logger.error(f"创建向量数据库集合失败: {str(e)}")
             raise
 
-
-        self.vectorstore: Optional[Chroma] = None
+        # Optional[Chroma] 表示 self.vectorstore 可以是 Chroma 对象，或者 None
+        self.vectorstore: Optional[Chroma] = None 
 
         logger.success("向量数据库初始化完成")
 
