@@ -32,13 +32,6 @@ class FeishuConfig(BaseModel):
     encrypt_key: Optional[str] = Field(None, description="飞书事件加密密钥")
 
 
-class VectorDBConfig(BaseModel):
-    """向量数据库配置"""
-    db_path: str = Field(default="./data/chroma_db", description="向量数据库持久化路径")
-    chunk_size: int = Field(default=500, description="文档块大小")
-    chunk_overlap: int = Field(default=50, description="文档块重叠大小")
-
-
 class ServerConfig(BaseModel):
     """服务器配置"""
     port: int = Field(default=5000, description="服务端口")
@@ -50,7 +43,6 @@ class Config(BaseModel):
     openai: OpenAIConfig
     wms: WMSConfig
     feishu: FeishuConfig
-    vector_db: VectorDBConfig = Field(default_factory=VectorDBConfig)
     server: ServerConfig = Field(default_factory=ServerConfig)
 
 # 调用函数获取所有的配置
@@ -90,11 +82,6 @@ def load_config(env_file: str = ".env") -> Config:
             app_secret=os.getenv("FEISHU_APP_SECRET", ""),
             verification_token=os.getenv("FEISHU_VERIFICATION_TOKEN", ""),
             encrypt_key=os.getenv("FEISHU_ENCRYPT_KEY")
-        ),
-        vector_db=VectorDBConfig(
-            db_path=os.getenv("VECTOR_DB_PATH", "./data/chroma_db"),
-            chunk_size=int(os.getenv("CHUNK_SIZE", "500")),
-            chunk_overlap=int(os.getenv("CHUNK_OVERLAP", "50"))
         ),
         server=ServerConfig(
             port=int(os.getenv("SERVER_PORT", "5000")),

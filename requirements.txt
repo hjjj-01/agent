@@ -9,9 +9,6 @@
 langchain>=1.0.0
 langchain-core>=1.0.0
 langchain-openai>=1.0.0
-# langchain-community 目前最新是 0.4.x，还没有 1.0 版本
-# 提供 SentenceTransformer/DashScope embeddings、文档加载器等
-langchain-community>=0.4.0
 
 # LangGraph（create_agent 的底层引擎，必须安装）
 # LangGraph 是一个有状态的多角色应用程序框架
@@ -24,34 +21,9 @@ langgraph>=0.6.0
 openai>=2.0.0
 
 # ============================================================
-# 向量数据库（用于RAG知识库）
-# ============================================================
-# ChromaDB：轻量级向量数据库，支持本地持久化
-chromadb>=0.5.0
-
-# LangChain 专用 Chroma 适配器（1.x 推荐方式）
-# langchain-community 里的 Chroma 仍然可用，但 langchain_chroma 是新官方路径
-langchain-chroma>=0.2.0
-
-# 文本分割器（RecursiveCharacterTextSplitter 等）
-# 1.x 中从独立的 langchain_text_splitters 包导入
-langchain-text-splitters>=0.3.0
-
-# ============================================================
-# Embedding 模型支持
-# ============================================================
-# 本地 SentenceTransformer 模型（用于离线或本地 embedding）
-# sentence-transformers>=3.0.0
-
-# ============================================================
 # 飞书SDK（消息机器人）
 # ============================================================
 lark-oapi>=1.7.0
-
-# ============================================================
-# 阿里云DashScope（用于阿里云 embedding 模型）
-# ============================================================
-dashscope>=1.17.0
 
 # ============================================================
 # Web框架（用于飞书机器人接收消息）

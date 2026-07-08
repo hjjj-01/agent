@@ -11,8 +11,8 @@ from loguru import logger
 import requests
 
 from .models import (
-    EmployeeApiRequest,
-    EmployeeApiResponse,
+    InventoryQueryRequest,
+    InventoryResponse,
     ErrorResponse,
 )
 
@@ -20,7 +20,7 @@ from .models import (
 class WMSClient:
     """
     WMS系统客户端
-    用于与WMS系统进行交互，获取员工工作量等数据。
+    用于与WMS系统进行交互，查询库位库存等数据。
     """
     # WMSClient 类的构造函数（初始化方法），在创建 WMSClient 对象时自动调用，用于设置客户端的基本配置并准备数据。
     def __init__(self, api_base_url: str, api_token: str):
@@ -43,30 +43,38 @@ class WMSClient:
 
     
 
-    def query_employee_api(self, params: EmployeeApiRequest) -> EmployeeApiResponse:
+    def query_inventory(self, params: InventoryQueryRequest) -> InventoryResponse:
         """
-        查询员工工作量API
+        查询库位库存API
+
+        对应 WMS 接口：
+          GET /wms/inventory-common/location-inventory-page
+
+        支持两种查询维度：
+          - 按库位查：params.locationCode 传库位编码（如 "W3-C1-01-01"）
+          - 按商品查：params.itemLabel + params.itemValue
+            （如 itemLabel="skuCode", itemValue="PT236DBKM"）
         """
-        logger.info(f"执行员工API查询，参数: {params}")
+        logger.info(f"执行库位库存查询，参数: {params}")
 
         try:
-            request_model = EmployeeApiRequest(**params)
-
-            payload = request_model.dict()
+            # params 已经是 InventoryQueryRequest 模型实例（由 tools.py 构造），
+            # 直接转成请求体即可，无需再用 InventoryQueryRequest(**params) 重新解包。
+            payload = params.model_dump(exclude_none=True)
             # 调用http请求通用方法
             response_data = self._make_request(
                 method="GET",
-                endpoint="wms/work-record/person-kpi",
+                endpoint="wms/inventory-common/location-inventory-page",
                 params=payload
             )
             # 解析响应数据
-            result = EmployeeApiResponse(**response_data)
+            result = InventoryResponse(**response_data)
 
-            logger.info(f"员工API查询成功，返回 {result.total} 条记录")
+            logger.info(f"库位库存查询成功，返回 {result.total} 条记录")
             return result
 
         except Exception as e:
-            logger.error(f"员工API查询失败: {str(e)}")
+            logger.error(f"库位库存查询失败: {str(e)}")
             raise
 
 
@@ -78,6 +86,9 @@ class WMSClient:
 
         # 去掉api_base_url和endpoint的首尾斜杠，确保URL格式正确
         url = f"{self.api_base_url.rstrip('/')}/{endpoint.lstrip('/')}"
+
+        # 先初始化，避免请求失败时 except 中引用未绑定的 response 变量
+        response = None
 
         try:
             logger.info(f"发送{method}请求: {url}")

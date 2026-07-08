@@ -4,10 +4,9 @@ WMS AI Agent - 主入口文件
 整合所有模块，启动完整的WMS智能助手系统。
 
 系统组成：
-1. WMS客户端 - 获取实时数据
-2. RAG知识库 - 检索知识信息
-3. LangChain Agent - 智能对话引擎
-4. 飞书机器人 - 用户交互界面
+1. WMS客户端 - 获取实时库存数据
+2. LangChain Agent - 智能对话引擎
+3. 飞书机器人 - 用户交互界面
 
 启动方式：
 1. 配置.env文件（填写API密钥等）
@@ -30,7 +29,7 @@ elif sys.platform == 'win32':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
-# 将src目录添加到Python路径
+# 更改Python路径，确保src目录在最前面
 sys.path.insert(0, str(Path(__file__).parent))
 
 from src.utils import load_config, setup_logger
@@ -186,10 +185,11 @@ def test_agent_directly():
 
     # 测试对话
     test_questions = [
-        "查询SKU001的库存",
-        "查询所有库存",
-        "检查低库存商品",
-        "仓库概览"
+        "查询库位 W3-C1-01-01 的库存",
+        "查询 SKU PT236DBKM 的库存分布",
+        "查询 W3-C1-01-01 库位上 PT236DBKM 的库存",
+        "哪些 SKU PT236DBKM 的库存低于 50？",
+        "仓库整体库存情况怎么样？"
     ]
 
     print("开始测试对话...")

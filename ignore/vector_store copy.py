@@ -628,7 +628,7 @@ class RAGSystem:
             chunk_overlap=config.vector_db.chunk_overlap
         )
 
-        # 初始化向量数据库
+        # 初始化向量数据库 上面那个类 VectorStore
         self.vector_store = VectorStore(
             persist_directory=config.vector_db.db_path,
             openai_api_key=config.openai.api_key,
